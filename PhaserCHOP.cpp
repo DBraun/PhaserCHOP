@@ -67,7 +67,7 @@ void
 PhaserCHOP::getGeneralInfo(CHOP_GeneralInfo* ginfo)
 {
 	// This will cause the node to cook every frame
-	ginfo->cookEveryFrameIfAsked = true;
+	ginfo->cookEveryFrameIfAsked = false;
 	ginfo->timeslice = false;
 	ginfo->inputMatchIndex = 0;
 }
@@ -77,28 +77,13 @@ PhaserCHOP::getOutputInfo(CHOP_OutputInfo* info)
 {
 	// If there is an input connected, we are going to match it's channel names etc
 	// otherwise we'll specify our own.
-	
-	if (info->opInputs->getNumInputs() > 0)
-	{
-		return false;
-	} else {
-		info->numChannels = 1;
-
-		// Since we are outputting a timeslice, the system will dictate
-		// the numSamples and startIndex of the CHOP data
-		info->numSamples = 1;
-		info->startIndex = 0;
-		info->sampleRate = 60;
-		return true;
-	}
+	return false;
 }
 
 const char*
 PhaserCHOP::getChannelName(int32_t index, void* reserved)
 {
 	return "chan1";
-	//std::string thing = "chan" + std::to_string(index);
-	//return thing.c_str();
 }
 
 float PhaserCHOP::clamp(float val, float lower, float upper) {
