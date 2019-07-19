@@ -87,8 +87,8 @@ PhaserCHOP::getChannelName(int32_t index, void* reserved)
 }
 
 float PhaserCHOP::clamp(float val, float lower, float upper) {
-	//return val <= lower ? lower : val >= upper ? upper : val;
-	return std::max(std::min(val, upper), lower);
+	return val <= lower ? lower : val >= upper ? upper : val;
+	//return std::max(std::min(val, upper), lower);
 }
 
 // An alternative easing function.
@@ -102,11 +102,15 @@ float PhaserCHOP::clamp(float val, float lower, float upper) {
 // will cause the objects to go through the animation very differently, or very sharply. A small value is a sharper edge.
 // The output of the phaser function will be [0,1], so these values can then be passed to any other easing function, perhaps "smoothstep",
 // or "ease-out".
-float PhaserCHOP::phaser(float t, float phase, float edge) {
+float PhaserCHOP::phaser(float t, float _phase, float edge) {
+
+	// safety checks because phase must be [0-1].
+	float phase = clamp(_phase, 0., 1.);
+	// but we will assume t has been clamped to [0,1] before entering this function.
+
 	// smaller edge corresponds to sharper separation according
 	// to differences in phase
-	return std::max(std::min((-1. + phase + t*(1. + edge)) / edge, 1.), 0.);
-	//return clamp((-1. + phase + t*(1. + edge)) / edge, 0., 1.);
+	return clamp((-1. + phase + t*(1. + edge)) / edge, 0., 1.);
 }
 
 void
@@ -122,16 +126,20 @@ PhaserCHOP::execute(const CHOP_Output* output,
 		const OP_CHOPInput	*timeInput = inputs->getInputCHOP(1);
 
 		float t = 0.;
-		if (timeInput->numChannels > 0) {
-			t = timeInput->getChannelData(0)[0];
-		}
+		bool canGetTime = timeInput->numChannels > 0;
+
 
 		int numChannels = output->numChannels;
 		int numSamples = output->numSamples;
 
-		for (int i = 0 ; i < numChannels; i++)
-		{
-			for (int j = 0; j < numSamples; j++) {
+		for (int j = 0; j < numSamples; j++) {
+
+			if (canGetTime && j < timeInput->numSamples) {
+				t = timeInput->getChannelData(0)[j];
+				t = clamp(t, 0., 1.);
+			}
+
+			for (int i = 0; i < numChannels; i++){
 
 				float phase = phaseInput->getChannelData(i)[j];
 				
