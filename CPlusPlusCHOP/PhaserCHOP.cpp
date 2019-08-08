@@ -119,8 +119,9 @@ PhaserCHOP::execute(const CHOP_Output* output,
 							  void* reserved)
 {	
 	double Edge = inputs->getParDouble("Edge");
+	int numInputs = inputs->getNumInputs();
 
-	if (inputs->getNumInputs() > 1)
+	if (numInputs > 1)
 	{
 		const OP_CHOPInput	*phaseInput = inputs->getInputCHOP(0);
 		const OP_CHOPInput	*timeInput = inputs->getInputCHOP(1);
@@ -144,6 +145,25 @@ PhaserCHOP::execute(const CHOP_Output* output,
 				float phase = phaseInput->getChannelData(i)[j];
 				
 				output->channels[i][j] = phaser(t, phase, Edge);
+			}
+		}
+	}
+	else if (numInputs == 1) {
+		// copy over the data, but linear clamp it.
+
+		const OP_CHOPInput* phaseInput = inputs->getInputCHOP(0);
+
+		int numChannels = output->numChannels;
+		int numSamples = output->numSamples;
+
+		for (int j = 0; j < numSamples; j++) {
+
+			for (int i = 0; i < numChannels; i++) {
+
+				float phase = phaseInput->getChannelData(i)[j];
+				phase = clamp(phase, 0., 1.);
+
+				output->channels[i][j] = phase;
 			}
 		}
 	}
