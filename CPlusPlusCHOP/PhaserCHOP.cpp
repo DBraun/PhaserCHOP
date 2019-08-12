@@ -101,49 +101,63 @@ float PhaserCHOP::clamp(float val, float lower, float upper) {
 // will be the last to start moving. The "edge" parameter describes the cohesiveness of the pack of animated objects; A small value
 // will cause the objects to go through the animation very differently, or very sharply. A small value is a sharper edge.
 // The output of the phaser function will be [0,1], so these values can then be passed to any other easing function, perhaps "smoothstep",
-// or "ease-out".
+// or "ease-in-out".
 float PhaserCHOP::phaser(float t, float _phase, float edge) {
 
 	// safety checks because phase must be [0-1].
 	float phase = clamp(_phase, 0., 1.);
 	// but we will assume t has been clamped to [0,1] before entering this function.
+	// We will also assume edge is greater than and not equal to 0.
 
 	// smaller edge corresponds to sharper separation according
 	// to differences in phase
-	return clamp((-1. + phase + t*(1. + edge)) / edge, 0., 1.);
+	return clamp((-1. + phase + t * (1. + edge)) / edge, 0., 1.);
 }
 
 void
 PhaserCHOP::execute(const CHOP_Output* output,
 							  OP_Inputs* inputs,
 							  void* reserved)
-{	
+{
 	double Edge = inputs->getParDouble("Edge");
 	int numInputs = inputs->getNumInputs();
 
+	bool canGetEdge = false;
+
+	const OP_CHOPInput* edgeInput;
+	if (numInputs > 2) {
+		edgeInput = inputs->getInputCHOP(2);
+		if (edgeInput->numSamples > 0 && edgeInput->numChannels > 0) {
+			canGetEdge = true;
+		}
+	}
+
 	if (numInputs > 1)
 	{
-		const OP_CHOPInput	*phaseInput = inputs->getInputCHOP(0);
-		const OP_CHOPInput	*timeInput = inputs->getInputCHOP(1);
+		const OP_CHOPInput* phaseInput = inputs->getInputCHOP(0);
+		const OP_CHOPInput* timeInput = inputs->getInputCHOP(1);
 
-		float t = 0.;
-		bool canGetTime = timeInput->numChannels > 0;
-
+		float t = 0.f;
+		// can we safely access the time input from the second input chop?
+		if (timeInput->numChannels > 0 && timeInput->numSamples > 0) {
+			t = timeInput->getChannelData(0)[timeInput->numSamples - 1];
+			t = clamp(t, 0., 1.);
+		}
 
 		int numChannels = output->numChannels;
 		int numSamples = output->numSamples;
 
 		for (int j = 0; j < numSamples; j++) {
 
-			if (canGetTime && j < timeInput->numSamples) {
-				t = timeInput->getChannelData(0)[j];
-				t = clamp(t, 0., 1.);
+			if (canGetEdge && j < edgeInput->numSamples) {
+				Edge = edgeInput->getChannelData(0)[j];
+				Edge = std::max(.00001, Edge);
 			}
 
-			for (int i = 0; i < numChannels; i++){
+			for (int i = 0; i < numChannels; i++) {
 
 				float phase = phaseInput->getChannelData(i)[j];
-				
+
 				output->channels[i][j] = phaser(t, phase, Edge);
 			}
 		}
@@ -209,11 +223,11 @@ PhaserCHOP::setupParameters(OP_ParameterManager* manager)
 		np.name = "Edge";
 		np.label = "Edge";
 		np.defaultValues[0] = 1.0;
-		np.minSliders[0] = .001;
+		np.minSliders[0] = .0001;
 		np.maxSliders[0] =  10.0;
 
 		np.clampMins[0] = true;
-		np.minValues[0] = .001;
+		np.minValues[0] = .0001;
 		
 		OP_ParAppendResult res = manager->appendFloat(np);
 		assert(res == OP_ParAppendResult::Success);
