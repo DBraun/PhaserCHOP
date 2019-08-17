@@ -3,8 +3,25 @@
 # PhaserCHOP
 Browse the examples from David Braun's ["Quantitative Easing"](https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk) Talk at the 2019 TouchDesigner summit.
 
-## What is PhaserCHOP?
-PhaserCHOP is an easy-to-use tool for staggering animations. Suppose you have several identical items that need to be animated with the LookupCHOP, but you don't want all items to start and stop at the same time. If an item should start ahead of the pack and end ahead of the pack, then that item has a higher phase close to 1. Items that start late and end late have a lower phase close to 0. Phase values must be between 0 and 1. Connect a CHOP with one channel and any number of phase values to the first input of the PhaserCHOP. Next connect an LFO that has been set to "ramp" as the second input to the PhaserCHOP. As the LFO rises, observe how samples with higher phase move from 0 to 1 earlier than samples with lower phase. Now adjust the "Edge" parameter on the PhaserCHOP to your preference. Notice how when the LFO is 0, all output from the PhaserCHOP is 0, and how when the LFO is 1, all output from the PhaserCHOP is 1. This is true regardless of your choice of the "Edge" parameter.
+## The GLSL Function
+```float phaser(float pct, float phase, float e) {
+    return clamp( (phase-1.+pct*(1.+e))/e, 0., 1.);
+}
+```
+Phaser is a parameterized easing function for phase-staggered animations. The arguments:
+
+* pct : [0,1]
+* phase : [0,1]
+* e (edge) : > 0
+
+These are the characteristics of the function:
+
+* When pct is 0, phaser returns 0, regardless of the other variables.
+* When pct is 1, phaser returns 1, regardless of the other variables.
+* All else equal, a larger phase causes phaser to return 1 sooner.
+* All else equal, a larger edge causes differences in phase to matter less.
+* All else equal, a smaller edge causes differences in phase to matter more. (Corollary to previous)
+
 
 ## Instructions
 [Build the dll yourself](https://docs.derivative.ca/Write_a_CPlusPlus_Plugin), or use of the compiled DLL files. `CPlusPlusCHOP/build/PhaserCHOP.dll` has been compiled for TouchDesigner 2018.26750 and `CustomOperator/build/PhaserCHOP.dll` has been compiled for TouchDesigner 2019.17550. This newer version can be used as a [Custom Operator](https://docs.derivative.ca/Custom_Operators)
