@@ -4,7 +4,8 @@
 Browse the examples from David Braun's ["Quantitative Easing"](https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk) Talk at the 2019 TouchDesigner summit.
 
 ## The GLSL Function
-```float phaser(float pct, float phase, float e) {
+```
+float phaser(float pct, float phase, float e) {
     return clamp( (phase-1.+pct*(1.+e))/e, 0., 1.);
 }
 ```
