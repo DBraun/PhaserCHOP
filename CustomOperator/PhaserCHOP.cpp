@@ -152,8 +152,19 @@ PhaserCHOP::execute(CHOP_Output* output,
 
 	if (numInputs > 1)
 	{
-		const OP_CHOPInput	*phaseInput = inputs->getInputCHOP(0);
-		const OP_CHOPInput	*timeInput = inputs->getInputCHOP(1);
+		const OP_CHOPInput* phaseInput;
+		const OP_CHOPInput* timeInput;
+		try {
+			phaseInput = inputs->getInputCHOP(0);
+			timeInput = inputs->getInputCHOP(1);
+		}
+		catch (...) {
+			return;
+		}
+
+		if (!phaseInput || !timeInput) {
+			return;
+		}
 
 		float t = 0.f;
 		// can we safely access the time input from the second input chop?
@@ -183,7 +194,17 @@ PhaserCHOP::execute(CHOP_Output* output,
 	else if (numInputs == 1) {
 		// copy over the data, but linear clamp it.
 
-		const OP_CHOPInput* phaseInput = inputs->getInputCHOP(0);
+		const OP_CHOPInput* phaseInput;
+		try {
+			phaseInput = inputs->getInputCHOP(0);
+		}
+		catch (...) {
+			return;
+		}
+
+		if (!phaseInput) {
+			return;
+		}
 
 		int numChannels = output->numChannels;
 		int numSamples = output->numSamples;
