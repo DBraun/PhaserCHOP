@@ -20,17 +20,16 @@ float phaser(float pct, float phase, float e) {
     return clamp( (phase-1.+pct*(1.+e))/e, 0., 1.);
 }
 ```
-Phaser is a parameterized easing function for phase-staggered animations. The arguments:
 
-* pct : [0,1]
-* phase : [0,1]
-* e (edge) : (0, infinity]
+* `pct`: [0,1]
+* `phase`: [0,1]
+* `e` (edge): (0, infinity]
 
 Quick description:
 
-* `pct` is like the `pct` in `easeIn`. It should be between 0 and 1 inclusive.
-* For `phase`, imagine an animation function `f(pct)` and another `f(pct+phase)`. If `phase` is larger, the sample is further down the `f(pct)` animation timeline.
-* For edge, imagine two different phase values `A` and `B` where `A`<`B`. Now imagine an animation such as an ease-in function. Neither `A` nor `B` has started. Because `B` has the larger phase, it can animate through the ease-in function for a duration `D`. At exactly the moment `B` finishes, begin to animate `A` through the same animation function for the same duration `D`. Because `B` finishes at exactly the moment `A` begins, the difference between `A` and `B` is the edge size `e`. We could add or subtract the same value to `A` and `B` as long as they don't bump into 0 or 1, and this "B-finishing-exactly-when-A-starts" property would remain. The trick of the phaser function is that we get to play with the `e` parameter and the `phase` values rather than think about `D` duration values. Instead of `D`, our timeline's overall duration comes from how long we take to animate `pct` from 0 to 1.
+* `pct` (short for "percent") is like the `pct` in `easeIn`. It should be between 0 and 1 inclusive.
+* For `phase`, imagine an animation function `f(pct)` and another `f(pct+phase)`. If `phase` is larger, the sample is further down the animation timeline.
+* For edge, imagine two different phase values `A` and `B` where `A`<`B`. Now imagine an animation such as an ease-in function. Neither `A` nor `B` has started. Because `B` has the larger phase, it can animate through the ease-in function for a duration `D`. At exactly the moment `B` finishes, begin to animate `A` through the same animation function for the same duration `D`. Because `B` finishes at exactly the moment `A` begins, the difference between `A` and `B` is defined as the edge size `e`. The trick of the phaser function is that we get to play with the `e` parameter and the `phase` values rather than think about the `D` duration value. Instead of `D`, our timeline's overall duration comes from how long we take to animate `pct` from 0 to 1.
 
 The properties of `phaser` can also be summed up like this:
 
