@@ -12,7 +12,7 @@ float easeIn(float pct) {
 ```
 Immediately we should note that `easeIn(0)==0` and `easeIn(1)==1`. This is a normal requirement of easing functions. You give it 0; you get 0. You give it 1; you get 1. All of the animation in between is up to you, either through keyframing or designing more [complex](https://github.com/glslify/glsl-easings/blob/master/bounce-out.glsl) [equations](https://en.wikipedia.org/wiki/Smoothstep#Generalization_to_higher-order_equations).
 
-What if we had a more generalized approach to easing where multiple inputs could go through the same animation but with staggered offsets? Such a function should be easy to use. The first input should be like `pct`. When you give it 0, the function should return 0 no matter what. When you give it 1, it should return 1 no matter what. And the other parameters should represent the phase identities of the many inputs as well as an overall "phase-separation-severity-kinda-thing". And now...
+What if we had a more generalized approach to easing where multiple inputs could go through the same animation but with staggered offsets or phases? Such a function should be easy to use and formatted like `easeIn`. The first input should be like `pct`. When you give it 0, the function should return 0 no matter what. When you give it 1, it should return 1 no matter what. The other parameters should represent the phase identities of the many animated items as well as an overall "phase-separation-severity-kinda-thing". And now...
 
 ## The Phaser GLSL Function
 ```glsl
@@ -29,7 +29,7 @@ Quick description:
 
 * `pct` (short for "percent") is like the `pct` in `easeIn`. It should be between 0 and 1 inclusive.
 * For `phase`, imagine an animation function `f(pct)` and another `f(pct+phase)`. If `phase` is larger, the sample is further down the animation timeline.
-* For edge, imagine two different phase values `A` and `B` where `A`<`B`. Now imagine an animation such as an ease-in function. Neither `A` nor `B` has started. Because `B` has the larger phase, it can animate through the ease-in function for a duration `D`. At exactly the moment `B` finishes, begin to animate `A` through the same animation function for the same duration `D`. Because `B` finishes at exactly the moment `A` begins, the difference between `A` and `B` is defined as the edge size `e`. The trick of the phaser function is that we get to play with the `e` parameter and the `phase` values rather than think about the `D` duration value. Instead of `D`, our timeline's overall duration comes from how long we take to animate `pct` from 0 to 1.
+* For edge, imagine two different phase values `A` and `B` where `A`<`B`. The output values of A and B will go from 0 to 1 but at different start times and end times. Imagine neither `A` nor `B` has started. Because `B` has the larger phase, its output can move from 0 to 1 over a duration `D`. At exactly the moment `B` finishes by reaching 1, `A`'s output can begin to animate over the same duration `D`. Because `B` finishes at exactly the moment `A` begins, the difference between `A` and `B` is defined as the edge size `e`. The trick of the phaser function is that we get to play with the `e` parameter and the `phase` values rather than think about the `D` duration value. Instead of `D`, our timeline's overall duration comes from how long we take to animate `pct` from 0 to 1.
 
 The properties of `phaser` can also be summed up like this:
 
