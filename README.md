@@ -39,10 +39,18 @@ The properties of `phaser` can also be summed up like this:
 * All else equal, a larger edge causes differences in phase to matter less.
 * All else equal, a smaller edge causes differences in phase to matter more. (Corollary to previous)
 
-## Instructions
-For a quick start, get `PhaserCHOP.dll` from the [Releases](https://github.com/DBraun/PhaserCHOP/releases) and place it into this repo's `Plugins` folder. To build the file yourself, open `PhaserCHOP.sln` and press `F5` in either Debug mode or Release Mode. A post-build event will copy the newly built DLL into `Plugins`.
+## How To Use PhaserCHOP in TouchDesigner
 
-The `PhaserCHOP.toe` in this repo is meant to be a unit test. For more interesting examples, check out [https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk](https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk) and David Braun's ["Quantitative Easing" 2019 TouchDesigner Summit Talk](https://www.youtube.com/watch?v=S4PQW4f34c8).
+Many of TouchDesigner's nodes match the output size to be the first input's size. (If you wire a CHOP of N channels and S samples into a Math CHOP, the output should probably still be N channels and S samples.) For this reason, the first input to the PhaserCHOP works as an N-channel list of S `phase` samples. N is often 1 but doesn't need to be. S can be very large. Although S can be as small as 1, you probably don't need the PhaserCHOP to animate only one sample.
+
+The second input to PhaserCHOP is the `pct` parameter from the GLSL function. When `pct` is 0, PhaserCHOP will return `0` for all samples. When `pct` is 1, it will return `1` for all samples.
+
+The third input to PhaserCHOP is the `e` parameter from the GLSL function. Typically you don't connect anything here. Instead you use the Custom Parameter `Edge` on the node itself. If you do want to wire into this third input, it should be 1 channel and S samples long.
+
+## Instructions
+For a quick start, get `PhaserCHOP.dll` from the [Releases](https://github.com/DBraun/PhaserCHOP/releases) and place it in this repo's `Plugins` folder. To build the file yourself, open `PhaserCHOP.sln` and press `F5` in either Debug mode or Release Mode. A post-build event will copy the newly built DLL into `Plugins`.
+
+The `PhaserCHOP.toe` in this repo is mainly meant to be a unit test. For more interesting examples, check out [https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk](https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk) and David Braun's ["Quantitative Easing" 2019 TouchDesigner Summit Talk](https://www.youtube.com/watch?v=S4PQW4f34c8).
 
 ## Changelog
 * 2020-06-01 Better unit test `SmoothstepCHOP.toe` for Custom Operator. Build with `TouchDesigner 2020.22080`. Cleanup repo by removing non-custom operator. All releases are now on the [Releases](https://github.com/DBraun/PhaserCHOP/releases) page.
