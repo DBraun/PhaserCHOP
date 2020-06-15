@@ -43,9 +43,9 @@ The properties of `phaser` can also be summed up like this:
 
 The first input to PhaserCHOP is the `phase` from the GLSL function. Why `phase` and not `pct`? Many of TouchDesigner's nodes match the output size to be the first input's size. (If you wire a CHOP of N channels and S samples into a Math CHOP, the output should probably still be N channels and S samples.) For this reason, the first input to the PhaserCHOP works as an N-channel list of S `phase` samples. N is often 1 but doesn't need to be. S can be very large. Although S can be as small as 1, you probably don't need the PhaserCHOP to animate only one sample. Most importantly, **the phase input typically does not need to animate/cook every frame.** You can swap it out an opportune times for different phases, like when `pct` is 0 or 1, but you probably shouldn't be animating it in a complicated way.
 
-The second input to PhaserCHOP is the `pct` parameter from the GLSL function. When `pct` is 0, PhaserCHOP will return `0` for all samples. When `pct` is 1, it will return `1` for all samples. Typically, you linearly bring `pct` from 0 to 1, but you could do it at different speeds or even directions.
+The second input to PhaserCHOP is the `pct` parameter from the GLSL function. It should be one sample and one channel. Channels other than the first and samples other than the last will be ignored. When `pct` is 0, PhaserCHOP will return `0` for all input phase samples. When `pct` is 1, it will return `1` for all phase samples. Typically, you linearly bring `pct` from 0 to 1, but you could do it at different speeds or even directions.
 
-The third input to PhaserCHOP is the `e` parameter from the GLSL function. Typically you don't connect anything here. Instead you use the Custom Parameter `Edge` on the node itself. If you do want to wire into this third input, it should be 1 channel and S samples long.
+The third input to PhaserCHOP is the `e` parameter from the GLSL function. Typically you don't connect anything here. Instead you use the Custom Parameter `Edge` on the node itself. If you do want to wire into this third input, it should be match the channels and samples of the phase input. If if it doesn't exactly match, it will use as many samples/channels as possible before reusing the last channel or last sample.
 
 ## Instructions
 For a quick start, get `PhaserCHOP.dll` from the [Releases](https://github.com/DBraun/PhaserCHOP/releases) and place it in this repo's `Plugins` folder. To build the file yourself, open `PhaserCHOP.sln` and press `F5` in either Debug mode or Release Mode. A post-build event will copy the newly built DLL into `Plugins`.
@@ -53,6 +53,7 @@ For a quick start, get `PhaserCHOP.dll` from the [Releases](https://github.com/D
 The `PhaserCHOP.toe` in this repo is mainly meant to be a unit test. For more interesting examples, check out [https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk](https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk) and David Braun's ["Quantitative Easing" 2019 TouchDesigner Summit Talk](https://www.youtube.com/watch?v=S4PQW4f34c8).
 
 ## Changelog
+* 2020-06-15 More flexibility in using the third wired "edge" input. Better test cases in `.toe` file for extremely small `edge` values. Follow C++ style guide.
 * 2020-06-01 Better unit test `SmoothstepCHOP.toe` for Custom Operator. Build with `TouchDesigner 2020.22080`. Cleanup repo by removing non-custom operator. All releases are now on the [Releases](https://github.com/DBraun/PhaserCHOP/releases) page.
 * 2019-08-07 create a Custom Operator version for TD 2019.17550.
 * 2019-07-04 working version.

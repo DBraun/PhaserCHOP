@@ -9,6 +9,7 @@
  */
 
 #include "CHOP_CPlusPlusBase.h"
+#include <limits>
 
  /*
 
@@ -43,7 +44,7 @@ public:
 
 
 	virtual int32_t		getNumInfoCHOPChans(void* reserved1) override;
-	virtual void		getInfoCHOPChan(int index,
+	virtual void		getInfoCHOPChan(int32_t index,
 		OP_InfoCHOPChan* chan,
 		void* reserved1) override;
 
@@ -63,7 +64,11 @@ private:
 	// this instance of the class (like its name).
 	const OP_NodeInfo*	myNodeInfo;
 
-	float clamp(float a, float theMin, float theMax);
-	float phaser(float t, float phase, float theEdge);
+	float clamp(double a, double theMin, double theMax);
+	float phaser(double t, double phase, double theEdge);
+
+	char* myError;
+
+	const double smallestDouble = pow(2, -16);
 
 };

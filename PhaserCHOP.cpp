@@ -42,7 +42,7 @@ extern "C"
 
 		// Information about the author of this OP
 		info->customOPInfo.authorName->setString("David Braun");
-		info->customOPInfo.authorEmail->setString("github.com/dbraun");
+		info->customOPInfo.authorEmail->setString("github.com/DBraun");
 
 		// This CHOP can work with 0 inputs
 		info->customOPInfo.minInputs = 0;
@@ -84,7 +84,6 @@ PhaserCHOP::~PhaserCHOP()
 void
 PhaserCHOP::getGeneralInfo(CHOP_GeneralInfo* ginfo, const OP_Inputs* inputs, void* reserved1)
 {
-	// This will cause the node to cook every frame
 	ginfo->cookEveryFrameIfAsked = false;
 	ginfo->timeslice = false;
 	ginfo->inputMatchIndex = 0;
@@ -93,20 +92,22 @@ PhaserCHOP::getGeneralInfo(CHOP_GeneralInfo* ginfo, const OP_Inputs* inputs, voi
 bool
 PhaserCHOP::getOutputInfo(CHOP_OutputInfo* info, const OP_Inputs* inputs, void* reserved1)
 {
-	// If there is an input connected, we are going to match it's channel names etc
-	// otherwise we'll specify our own.
+	// return false to just match the first input's info entirely
 	return false;
 }
 
 void
 PhaserCHOP::getChannelName(int32_t index, OP_String* name, const OP_Inputs* inputs, void* reserved1)
 {
-	name->setString("chan1");
+	// This function doesn't matter because getOutputInfo returns false to match the first input CHOP.
+	// name->setString("chan1");
 }
 
-float PhaserCHOP::clamp(float val, float lower, float upper) {
+float
+PhaserCHOP::clamp(double val, double lower, double upper)
+{
 	return val <= lower ? lower : val >= upper ? upper : val;
-	//return std::max(std::min(val, upper), lower);
+	// return std::max(std::min(val, upper), lower); // alternative equivalent version
 }
 
 // An alternative easing function.
@@ -120,16 +121,17 @@ float PhaserCHOP::clamp(float val, float lower, float upper) {
 // will cause the objects to go through the animation very differently, or very sharply. A small value is a sharper edge.
 // The output of the phaser function will be [0,1], so these values can then be passed to any other easing function, perhaps "smoothstep",
 // or "ease-in-out".
-float PhaserCHOP::phaser(float t, float _phase, float edge) {
-
+float
+PhaserCHOP::phaser(double t, double _phase, double edge)
+{
 	// safety checks because phase must be [0-1].
-	float phase = clamp(_phase, 0., 1.);
+	float phase = clamp(_phase, 0.f, 1.f);
 	// but we will assume t has been clamped to [0,1] before entering this function.
 	// We will also assume edge is greater than and not equal to 0.
 
 	// smaller edge corresponds to sharper separation according
 	// to differences in phase
-	return clamp((-1. + phase + t*(1. + edge)) / edge, 0., 1.);
+	return clamp((-1.f + phase + t*(1.f + edge)) / edge, 0.f, 1.f);
 }
 
 void
@@ -137,13 +139,20 @@ PhaserCHOP::execute(CHOP_Output* output,
 	const OP_Inputs* inputs,
 	void* reserved)
 {	
+
+	// remove errors
+	myError = "";
+
+	// Edge can't be zero. We'll rely on the Parameter settings to prevent this.
 	double Edge = inputs->getParDouble("Edge");
+	Edge = std::max(smallestDouble, Edge);
 	int numInputs = inputs->getNumInputs();
 
 	bool canGetEdge = false;
 
 	const OP_CHOPInput* edgeInput;
-	if (numInputs > 2) {
+	if (numInputs > 2)
+	{
 		edgeInput = inputs->getInputCHOP(2);
 		if (edgeInput->numSamples > 0 && edgeInput->numChannels > 0) {
 			canGetEdge = true;
@@ -154,21 +163,33 @@ PhaserCHOP::execute(CHOP_Output* output,
 	{
 		const OP_CHOPInput* phaseInput;
 		const OP_CHOPInput* timeInput;
-		try {
+		try
+		{
 			phaseInput = inputs->getInputCHOP(0);
 			timeInput = inputs->getInputCHOP(1);
 		}
-		catch (...) {
+		catch (std::exception& e)
+		{
+			myError = (char*) e.what();
 			return;
 		}
 
-		if (!phaseInput || !timeInput) {
+		// For PhaserCHOP to work, at a minimum we need both a valid
+		// phaseInput and valid timeInput.
+		if (!phaseInput || !timeInput)
+		{
+			// We have at least two inputs,
+			// but one of them isn't phase and one of them isn't time.
+			// So just return.
 			return;
 		}
 
 		float t = 0.f;
-		// can we safely access the time input from the second input chop?
-		if (timeInput->numChannels > 0 && timeInput->numSamples > 0) {
+		// Can we safely access the time input from the second input chop?
+		if (timeInput->numChannels > 0 && timeInput->numSamples > 0)
+		{
+			// Get the latest sample in the time input because PhaserCHOP doesn't
+			// yet support timeslicing.
 			t = timeInput->getChannelData(0)[timeInput->numSamples-1];
 			t = clamp(t, 0., 1.);
 		}
@@ -176,14 +197,17 @@ PhaserCHOP::execute(CHOP_Output* output,
 		int numChannels = output->numChannels;
 		int numSamples = output->numSamples;
 
-		for (int j = 0; j < numSamples; j++) {
+		for (int j = 0; j < numSamples; j++)
+		{
+			for (int i = 0; i < numChannels; i++)
+			{
+				if (canGetEdge)
+				{
+					Edge = edgeInput->getChannelData(std::min(i, edgeInput->numChannels-1))[std::min(j, edgeInput->numSamples - 1)];
 
-			if (canGetEdge && j < edgeInput->numSamples) {
-				Edge = edgeInput->getChannelData(0)[j];
-				Edge = std::max(.00001, Edge);
-			}
-
-			for (int i = 0; i < numChannels; i++){
+					// Edge must be greater than zero.
+					Edge = std::max(smallestDouble, Edge);
+				}
 
 				float phase = phaseInput->getChannelData(i)[j];
 				
@@ -191,28 +215,34 @@ PhaserCHOP::execute(CHOP_Output* output,
 			}
 		}
 	}
-	else if (numInputs == 1) {
+	else if (numInputs == 1)
+	{
 		// copy over the data, but linear clamp it.
 
 		const OP_CHOPInput* phaseInput;
-		try {
+		try
+		{
 			phaseInput = inputs->getInputCHOP(0);
 		}
-		catch (...) {
+		catch (std::exception& e)
+		{
+			myError = (char*)e.what();
 			return;
 		}
 
-		if (!phaseInput) {
+		if (!phaseInput)
+		{
+			// we have 1 input but it's not the phase input
 			return;
 		}
 
 		int numChannels = output->numChannels;
 		int numSamples = output->numSamples;
 
-		for (int j = 0; j < numSamples; j++) {
-
-			for (int i = 0; i < numChannels; i++) {
-
+		for (int j = 0; j < numSamples; j++)
+		{
+			for (int i = 0; i < numChannels; i++)
+			{
 				float phase = phaseInput->getChannelData(i)[j];
 				phase = clamp(phase, 0., 1.);
 
@@ -264,11 +294,11 @@ PhaserCHOP::setupParameters(OP_ParameterManager* manager, void* reserved1)
 		np.name = "Edge";
 		np.label = "Edge";
 		np.defaultValues[0] = 1.0;
-		np.minSliders[0] = .0001;
+		np.minSliders[0] = smallestDouble;
 		np.maxSliders[0] =  10.0;
 
 		np.clampMins[0] = true;
-		np.minValues[0] = .0001;
+		np.minValues[0] = smallestDouble;
 		
 		OP_ParAppendResult res = manager->appendFloat(np);
 		assert(res == OP_ParAppendResult::Success);
