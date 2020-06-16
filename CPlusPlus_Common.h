@@ -1,28 +1,19 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative) and
-* can only be used, and/or modified for use, in conjunction with
+/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
+* and can only be used, and/or modified for use, in conjunction with
 * Derivative's TouchDesigner software, and only if you are a licensee who has
-* accepted Derivative's TouchDesigner license or assignment agreement (which
-* also govern the use of this file).  You may share a modified version of this
-* file with another authorized licensee of Derivative's TouchDesigner software.
-* Otherwise, no redistribution or sharing of this file, with or without
-* modification, is permitted.
-*/
-
-/*
-* Produced by:
+* accepted Derivative's TouchDesigner license or assignment agreement
+* (which also govern the use of this file). You may share or redistribute
+* a modified version of this file provided the following conditions are met:
 *
-* 				Derivative Inc
-*				401 Richmond Street West, Unit 386
-*				Toronto, Ontario
-*				Canada   M5V 3A8
-*				416-591-3555
-*
-* NAME:				CPlusPlus_Common.h
-*
+* 1. The shared file or redistribution must retain the information set out
+* above and this list of conditions.
+* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
+* to endorse or promote products derived from this file without specific
+* prior written permission from Derivative.
 */
 
 /*******
-Derivative Developers:: Make sure the virtual function order
+Derivative Developers: Make sure the virtual function order
 stays the same, otherwise changes won't be backwards compatible
 ********/
 
@@ -62,13 +53,19 @@ enum class OP_CPUMemPixelType : int32_t
 	// 32-bit float per color, RGBA pixels
 	RGBA32Float,
 
-	// Single and double channel options
-	// Fixed
+	// A few single and two channel versions of the above
 	R8Fixed,
 	RG8Fixed,
-	// Float
 	R32Float,
 	RG32Float,
+
+	R16Fixed = 100,
+	RG16Fixed,
+	RGBA16Fixed,
+
+	R16Float = 200,
+	RG16Float,
+	RGBA16Float,
 };
 
 class OP_String;
@@ -89,7 +86,7 @@ public:
 	// Spaces are not allowed
 	OP_String*		opType;
 
-	// The english readable label for the node. This is what is show in the 
+	// The english readable label for the node. This is what is shown in the 
 	// OP Create Menu dialog.
 	// Spaces and other special characters are allowed.
 	// This can be a UTF-8 encoded string for non-english langauge label
@@ -146,24 +143,26 @@ public:
 class OP_NodeInfo
 {
 public:
-	// The full path to the operator
 
+	// The full path to the operator
 	const char*		opPath;
 
 	// A unique ID representing the operator, no two operators will ever
 	// have the same ID in a single TouchDesigner instance.
-
 	uint32_t		opId;
 
 	// This is the handle to the main TouchDesigner window.
 	// It's possible this will be 0 the first few times the operator cooks,
 	// incase it cooks while TouchDesigner is still loading up
-
 #ifdef _WIN32
 	HWND			mainWindowHandle;
 #endif
 
-	int32_t			reserved[19];
+	// The path to where the plugin's binary is located on this machine.
+	// UTF8-8 encoded.
+	const char*		pluginPath;
+
+	int32_t			reserved[17];
 };
 
 
@@ -804,7 +803,7 @@ public:
 		attribType = AttribType::Float;
 	}
 
-	SOP_CustomAttribInfo(const char* n, int32_t numComp, const AttribType& type)
+	SOP_CustomAttribInfo(const char* n, int32_t numComp, AttribType type)
 	{
 		name = n;
 		numComponents = numComp;
@@ -825,18 +824,13 @@ public:
 
 	SOP_CustomAttribData()
 	{
-		name = nullptr;
-		numComponents = 0;
-		attribType = AttribType::Float;
 		floatData = nullptr;
 		intData = nullptr;
 	}
 
-	SOP_CustomAttribData(const char* n, int32_t numComp, const AttribType& type)
+	SOP_CustomAttribData(const char* n, int32_t numComp, AttribType type) :
+		SOP_CustomAttribInfo(n, numComp, type)
 	{
-		name = n;
-		numComponents = numComp;
-		attribType = type;
 		floatData = nullptr;
 		intData = nullptr;
 	}
@@ -949,8 +943,6 @@ public:
 
 	// Returns the full list of all the point indices for all primitives.
 	// The primitives are stored back to back in this array.
-	// This is a faster but harder way to work with primitives than
-	// getPrimPointIndices()
 	const int32_t*
 	getAllPrimPointIndices()
 	{
@@ -1152,9 +1144,8 @@ public:
 	// To use Python in your Plugin you need to fill the
 	// customOPInfo.pythonVersion member in Fill*PluginInfo.
 	//
-	// The returned object does NOT have it's reference count incremented.
-	// So increment it if you want to hold onto the object, and only
-	// decement it if you've incremented it.
+	// The returned object, if not null should have its reference count decremented
+	// or else a memorky leak will occur.
 	virtual PyObject*				getParPython(const char* name) const = 0;
 
 
@@ -1361,7 +1352,7 @@ static_assert(offsetof(OP_NodeInfo, opId) == 8, "Incorrect Alignment");
 	static_assert(offsetof(OP_NodeInfo, mainWindowHandle) == 16, "Incorrect Alignment");
 	static_assert(sizeof(OP_NodeInfo) == 104, "Incorrect Size");
 #else
-	static_assert(sizeof(OP_NodeInfo) == 88, "Incorrect Size");
+	static_assert(sizeof(OP_NodeInfo) == 96, "Incorrect Size");
 #endif
 
 static_assert(offsetof(OP_DATInput, opPath) == 0, "Incorrect Alignment");

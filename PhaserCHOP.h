@@ -10,7 +10,6 @@
 
 #include "CHOP_CPlusPlusBase.h"
 #include <limits>
-
  /*
 
  This example file implements a class that does 2 different things depending on
@@ -71,4 +70,13 @@ private:
 
 	const double smallestDouble = pow(2, -16);
 
+	double myRamp = 0.;
+
+};
+
+enum class PHASER_OutputFormat
+{
+	Invalid = -1,
+	Onechannel,
+	Multichannels
 };

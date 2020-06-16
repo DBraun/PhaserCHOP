@@ -18,6 +18,7 @@
 #include <string>
 #include <algorithm>    // std::max
 
+
 // These functions are basic C function, which the DLL loader can find
 // much easier than finding a C++ Class.
 // The DLLEXPORT prefix is needed so the compile exports these functions from the .dll
@@ -73,7 +74,7 @@ DestroyCHOPInstance(CHOP_CPlusPlusBase* instance)
 };
 
 
-PhaserCHOP::PhaserCHOP(const OP_NodeInfo* info) : myNodeInfo(info)
+PhaserCHOP::PhaserCHOP(const OP_NodeInfo* info) : myNodeInfo(info), myRamp(0.)
 {
 }
 
@@ -84,23 +85,60 @@ PhaserCHOP::~PhaserCHOP()
 void
 PhaserCHOP::getGeneralInfo(CHOP_GeneralInfo* ginfo, const OP_Inputs* inputs, void* reserved1)
 {
-	ginfo->cookEveryFrameIfAsked = false;
+	ginfo->cookEveryFrameIfAsked = true;
 	ginfo->timeslice = false;
-	ginfo->inputMatchIndex = 0;
+	ginfo->inputMatchIndex = 1;
 }
 
 bool
 PhaserCHOP::getOutputInfo(CHOP_OutputInfo* info, const OP_Inputs* inputs, void* reserved1)
 {
-	// return false to just match the first input's info entirely
-	return false;
+	const OP_CHOPInput* phaseInput = inputs->getInputCHOP(1);
+
+	PHASER_OutputFormat myOutputFormat = (PHASER_OutputFormat)inputs->getParDouble("Outputformat");
+
+	switch (myOutputFormat)
+	{
+		case PHASER_OutputFormat::Invalid:			
+			myError = "Invalid Output Format";
+			return false;
+			break;
+		case PHASER_OutputFormat::Onechannel:
+			if (phaseInput) {
+				return false;
+			}
+			else {
+				info->numChannels = 1;
+				info->numSamples = inputs->getParDouble("Nsamples");
+				//info->sampleRate = 60.f; // todo sample rate
+				return true;
+			}
+			break;
+		case PHASER_OutputFormat::Multichannels:
+			// swap samples to channels and channels to samples
+			if (phaseInput) {
+				info->numChannels = phaseInput->numSamples;
+				info->numSamples = phaseInput->numChannels;
+			}
+			else {
+			// swap samples to channels and channels to samples
+				info->numChannels = inputs->getParDouble("Nsamples");
+				info->numSamples = 1;
+				//info->sampleRate = 60.f; // todo sample rate
+			}
+			return true;
+			break;
+		default:
+			myError = "Unexpected Output Format";
+			return false;
+			break;
+	}
 }
 
 void
 PhaserCHOP::getChannelName(int32_t index, OP_String* name, const OP_Inputs* inputs, void* reserved1)
 {
-	// This function doesn't matter because getOutputInfo returns false to match the first input CHOP.
-	// name->setString("chan1");
+	 name->setString("chan1");
 }
 
 float
@@ -125,128 +163,109 @@ float
 PhaserCHOP::phaser(double t, double _phase, double edge)
 {
 	// safety checks because phase must be [0-1].
-	float phase = clamp(_phase, 0.f, 1.f);
+	float phase = clamp(_phase, 0., 1.);
 	// but we will assume t has been clamped to [0,1] before entering this function.
 	// We will also assume edge is greater than and not equal to 0.
 
 	// smaller edge corresponds to sharper separation according
 	// to differences in phase
-	return clamp((-1.f + phase + t*(1.f + edge)) / edge, 0.f, 1.f);
+	return clamp((-1. + phase + t*(1. + edge)) / edge, 0., 1.);
 }
 
 void
 PhaserCHOP::execute(CHOP_Output* output,
 	const OP_Inputs* inputs,
 	void* reserved)
-{	
-
+{
 	// remove errors
 	myError = "";
+
+	myRamp = fmod(myRamp + (1. / 60.)/4., 1.); // basic LFO ramp over 4 seconds
 
 	// Edge can't be zero. We'll rely on the Parameter settings to prevent this.
 	double Edge = inputs->getParDouble("Edge");
 	Edge = std::max(smallestDouble, Edge);
 	int numInputs = inputs->getNumInputs();
 
+	const OP_CHOPInput* timeInput = inputs->getInputCHOP(0);
+	const OP_CHOPInput* phaseInput = inputs->getInputCHOP(1);
+	const OP_CHOPInput* edgeInput = inputs->getInputCHOP(2);
+
 	bool canGetEdge = false;
-
-	const OP_CHOPInput* edgeInput;
-	if (numInputs > 2)
+	if (edgeInput && edgeInput->numSamples > 0 && edgeInput->numChannels > 0)
 	{
-		edgeInput = inputs->getInputCHOP(2);
-		if (edgeInput->numSamples > 0 && edgeInput->numChannels > 0) {
-			canGetEdge = true;
-		}
+		canGetEdge = true;
 	}
 
-	if (numInputs > 1)
+	double t = 0.;
+	if (timeInput && timeInput->numChannels > 0 && timeInput->numSamples > 0)
 	{
-		const OP_CHOPInput* phaseInput;
-		const OP_CHOPInput* timeInput;
-		try
-		{
-			phaseInput = inputs->getInputCHOP(0);
-			timeInput = inputs->getInputCHOP(1);
-		}
-		catch (std::exception& e)
-		{
-			myError = (char*) e.what();
-			return;
-		}
+		// Get the latest sample in the time input because PhaserCHOP doesn't
+		// yet support timeslicing.
+		t = timeInput->getChannelData(0)[timeInput->numSamples - 1];
+		t = clamp(t, 0., 1.);
+	}
+	else
+	{
+		t = myRamp;
+	}
 
-		// For PhaserCHOP to work, at a minimum we need both a valid
-		// phaseInput and valid timeInput.
-		if (!phaseInput || !timeInput)
-		{
-			// We have at least two inputs,
-			// but one of them isn't phase and one of them isn't time.
-			// So just return.
-			return;
-		}
+	PHASER_OutputFormat myOutputFormat = (PHASER_OutputFormat)inputs->getParDouble("Outputformat");
 
-		float t = 0.f;
-		// Can we safely access the time input from the second input chop?
-		if (timeInput->numChannels > 0 && timeInput->numSamples > 0)
-		{
-			// Get the latest sample in the time input because PhaserCHOP doesn't
-			// yet support timeslicing.
-			t = timeInput->getChannelData(0)[timeInput->numSamples-1];
-			t = clamp(t, 0., 1.);
-		}
+	int numChannels, numSamples;
 
-		int numChannels = output->numChannels;
-		int numSamples = output->numSamples;
+	if (phaseInput) {
+		numChannels = phaseInput->numChannels;
+		numSamples = phaseInput->numSamples;
+	}
+	else {
+		numChannels = 1;
+		numSamples = inputs->getParDouble("Nsamples");
+	}
 
-		for (int j = 0; j < numSamples; j++)
+	float phase = 0.f;
+	float result = 0.f;
+
+	for (int j = 0; j < numSamples; j++)
+	{
+		for (int i = 0; i < numChannels; i++)
 		{
-			for (int i = 0; i < numChannels; i++)
+			if (canGetEdge)
 			{
-				if (canGetEdge)
-				{
-					Edge = edgeInput->getChannelData(std::min(i, edgeInput->numChannels-1))[std::min(j, edgeInput->numSamples - 1)];
+				Edge = edgeInput->getChannelData(std::min(i, edgeInput->numChannels-1))[std::min(j, edgeInput->numSamples - 1)];
 
-					// Edge must be greater than zero.
-					Edge = std::max(smallestDouble, Edge);
-				}
-
-				float phase = phaseInput->getChannelData(i)[j];
-				
-				output->channels[i][j] = phaser(t, phase, Edge);
+				// Edge must be greater than zero.
+				Edge = std::max(smallestDouble, Edge);
 			}
-		}
-	}
-	else if (numInputs == 1)
-	{
-		// copy over the data, but linear clamp it.
 
-		const OP_CHOPInput* phaseInput;
-		try
-		{
-			phaseInput = inputs->getInputCHOP(0);
-		}
-		catch (std::exception& e)
-		{
-			myError = (char*)e.what();
-			return;
-		}
-
-		if (!phaseInput)
-		{
-			// we have 1 input but it's not the phase input
-			return;
-		}
-
-		int numChannels = output->numChannels;
-		int numSamples = output->numSamples;
-
-		for (int j = 0; j < numSamples; j++)
-		{
-			for (int i = 0; i < numChannels; i++)
+			if (phaseInput)
 			{
-				float phase = phaseInput->getChannelData(i)[j];
-				phase = clamp(phase, 0., 1.);
+				phase = phaseInput->getChannelData(i)[j];
+			}
+			else
+			{
+				// Rely on the N samples parameter and make a descending ramp of phase samples.
+				// Question: what if the ramp is only 1 sample? Then pick 0.5 rather than 0 or 1.
+				phase = numSamples > 1 ? 1. - (double)j / (double)(numSamples - 1) : 0.5;
+			}
 
-				output->channels[i][j] = phase;
+			result = phaser(t, phase, Edge);
+
+			switch (myOutputFormat)
+			{
+				case PHASER_OutputFormat::Invalid:
+					// don't write to output.
+					break;
+				case PHASER_OutputFormat::Onechannel:
+					output->channels[i][j] = result;
+					break;
+				case PHASER_OutputFormat::Multichannels:
+					// swap samples to channels and channels to samples
+					output->channels[j][i] = result;
+					break;
+				default:
+					// don't write to output.
+					break;
 			}
 		}
 	}
@@ -301,6 +320,42 @@ PhaserCHOP::setupParameters(OP_ParameterManager* manager, void* reserved1)
 		np.minValues[0] = smallestDouble;
 		
 		OP_ParAppendResult res = manager->appendFloat(np);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	// Number of samples:
+	// This parameter only matters when phase samples isn't wired in.
+	{
+		OP_NumericParameter	np;
+
+		np.name = "Nsamples";
+		np.label = "N Samples";
+		np.defaultValues[0] = 10.0;
+		np.minSliders[0] = 0;
+		np.maxSliders[0] = 10.;
+
+		np.clampMins[0] = true;
+		np.minValues[0] = 0;
+
+		OP_ParAppendResult res = manager->appendInt(np);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	// Output Format:
+	// First option is do nothing and copy info of phase samples input.
+	// Second option is equivalent to shuffle chop swap channels and samples.
+	{
+		OP_StringParameter	sp;
+
+		sp.name = "Outputformat";
+		sp.label = "Output Format";
+
+		sp.defaultValue = "Onechannel";
+
+		const char* names[] = { "Onechannel", "Multichannels" };
+		const char* labels[] = { "One Channel", "Multi-Channels" };
+
+		OP_ParAppendResult res = manager->appendMenu(sp, 2, names, labels);
 		assert(res == OP_ParAppendResult::Success);
 	}
 }
