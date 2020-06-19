@@ -45,10 +45,10 @@ extern "C"
 		info->customOPInfo.authorName->setString("David Braun");
 		info->customOPInfo.authorEmail->setString("github.com/DBraun");
 
-		// This CHOP can work with 0 inputs
+		// This CHOP can work with 0 inputs.
 		info->customOPInfo.minInputs = 0;
 
-		// It can accept up to 3 inputs
+		// It can accept up to 3 inputs. Each is optional.
 		info->customOPInfo.maxInputs = 3;
 	}
 
@@ -105,11 +105,13 @@ PhaserCHOP::getOutputInfo(CHOP_OutputInfo* info, const OP_Inputs* inputs, void* 
 			break;
 		case PHASER_OutputFormat::Onechannel:
 			if (phaseInput) {
+				// return false and copy the samples/channels of the phaseInput
 				return false;
 			}
 			else {
 				info->numChannels = 1;
 				info->numSamples = inputs->getParDouble("Nsamples");
+				info->startIndex = 0;
 				//info->sampleRate = 60.f; // todo sample rate
 				return true;
 			}
@@ -119,11 +121,13 @@ PhaserCHOP::getOutputInfo(CHOP_OutputInfo* info, const OP_Inputs* inputs, void* 
 			if (phaseInput) {
 				info->numChannels = phaseInput->numSamples;
 				info->numSamples = phaseInput->numChannels;
+				info->startIndex = phaseInput->startIndex;
 			}
 			else {
 			// swap samples to channels and channels to samples
 				info->numChannels = inputs->getParDouble("Nsamples");
 				info->numSamples = 1;
+				info->startIndex = 0;
 				//info->sampleRate = 60.f; // todo sample rate
 			}
 			return true;
