@@ -59,7 +59,7 @@ For a quick start, get `PhaserCHOP.dll` from the [Releases](https://github.com/D
 The `PhaserCHOP.toe` in this repo is mainly meant to be a unit test. For more interesting examples, check out [https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk](https://github.com/DBraun/PhaserCHOP-TD-Summit-Talk) and David Braun's ["Quantitative Easing" 2019 TouchDesigner Summit Talk](https://www.youtube.com/watch?v=S4PQW4f34c8).
 
 ## Changelog
-* 2020-08-21 Update README.
+* 2020-08-21 v2.0 **Breaking change: Phase and Time inputs have been swapped.**
 * 2020-06-15 More flexibility in using the third wired "edge" input. Better test cases in `.toe` file for extremely small `edge` values. Follow C++ style guide.
 * 2020-06-01 Better unit test `SmoothstepCHOP.toe` for Custom Operator. Build with `TouchDesigner 2020.22080`. Cleanup repo by removing non-custom operator. All releases are now on the [Releases](https://github.com/DBraun/PhaserCHOP/releases) page.
 * 2019-08-07 create a Custom Operator version for TD 2019.17550.
