@@ -41,11 +41,11 @@ The properties of `phaser` can also be summed up like this:
 
 ## How To Use PhaserCHOP in TouchDesigner
 
-The first input to PhaserCHOP is the `pct` from the GLSL function. **This is different from the first version of PhaserCHOP.** It should be one sample and one channel. Channels other than the first and samples other than the last will be ignored. When `pct` is 0, PhaserCHOP will return `0` for all input phase samples. When `pct` is 1, it will return `1` for all phase samples. Typically, you linearly bring `pct` from 0 to 1, but you could do it at different speeds or even directions.
+The first input to PhaserCHOP is the `pct` from the GLSL function. **This is different from the first version of PhaserCHOP.** It should be one sample and one channel. Channels other than the first and samples other than the last will be ignored. When `pct` is 0, PhaserCHOP will return `0` for all input phase samples. When `pct` is 1, it will return `1` for all phase samples. Typically, you linearly bring `pct` from 0 to 1, but you could do it at different speeds or directions.
 
 The second input to the PhaserCHOP works as an N-channel list of S `phase` samples. N is often 1 but doesn't need to be. S can be very large. Although S can be as small as 1, you probably don't need the PhaserCHOP to animate only one sample. Most importantly, **the `phase` input typically does not need to animate/cook every frame.** You can swap it out an opportune times for different phases, like when `pct` is 0 or 1, but you probably shouldn't be animating it in a complicated way.
 
-The third input to PhaserCHOP is the `e` parameter from the GLSL function. Typically you don't connect anything here. Instead you use the Custom Parameter `Edge` on the node itself. If you do want to wire into this third input, it should be match the channels and samples of the phase input. If it doesn't exactly match, it will use as many samples/channels as possible before reusing the last channel or last sample.
+The third input to PhaserCHOP is the `e` parameter from the GLSL function. Typically you don't connect anything here. Instead you use the Custom Parameter `Edge` on the node itself. If you do want to wire into this third input, it should match the channels and samples of the phase input. If it doesn't exactly match, it will use as many samples/channels as possible before reusing the last channel or last sample.
 
 The first custom parameter is `Edge`, as explained earlier. It only matters if you don't wire a third input.
 
